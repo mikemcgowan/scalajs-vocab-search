@@ -1,13 +1,15 @@
 package mikemcgowan
 
+import kantan.csv.ops._
 import org.querki.jquery._
 import org.scalajs.dom.XMLHttpRequest
 
 object Application {
 
-  type Matrix = Array[Array[String]]
+  type VocabItem = (String, String, Option[String], String)
+  type Vocab = List[VocabItem]
 
-  private val url =
+  val csvUrl =
     "https://raw.githubusercontent.com/mikemcgowan/memrise-scraper-scala/master/memrise_database.csv"
 
   def main(args: Array[String]): Unit =
@@ -24,12 +26,12 @@ object Application {
 
   def downloadCsv(): Unit = {
     val xhr = new XMLHttpRequest()
-    xhr.open("GET", url)
+    xhr.open("GET", csvUrl)
     xhr.onload = _ =>
      if (xhr.status == 200) {
         setStatus("Please wait while the CSV file is parsed ...")
         val data = parseCsv(xhr.responseText)
-        data foreach (d => println("%s means %s" format(d(0), d(1))))
+        data foreach (d => println("%s means %s" format(d._1, d._2)))
         setStatus("Found %d vocab items!" format data.length)
       } else {
         setStatus("Couldn't download CSV file.")
@@ -37,9 +39,14 @@ object Application {
     xhr.send()
   }
 
-  def parseCsv(raw: String): Matrix = {
-    val lines = raw split "\r\n"
-    lines.tail map (_.split(','))
+  def parseCsv(raw: String): Vocab = {
+    val reader = raw.asCsvReader[VocabItem](',', header = true)
+    val buf = scala.collection.mutable.ListBuffer.empty[VocabItem]
+    reader foreach {
+      case Right(x) => buf += x
+      case _ => ()
+    }
+    buf.toList
   }
 
 }
