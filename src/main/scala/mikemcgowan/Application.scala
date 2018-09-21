@@ -57,9 +57,11 @@ object Application {
         if (matches.size == 1) "" else "s",
         term
       ))
-      renderVocab(matches take maxMatches)
+      renderVocab(matches take maxMatches, term)
     } else {
       setStatus("%d vocab items" format vocab.length)
+      $("#tbody").empty()
+      $("#table").hide()
     }
   }
 
@@ -69,7 +71,7 @@ object Application {
       case (a, b, Some(c), d) => List(a, b, c, d) exists (_.toLowerCase contains term.toLowerCase)
     }
 
-  def renderVocab(vocab: Vocab): Unit = {
+  def renderVocab(vocab: Vocab, term: String): Unit = {
     $("#tbody").empty()
     if (vocab.isEmpty)
       $("#table").hide()
@@ -77,13 +79,16 @@ object Application {
       $("#table").show()
       vocab foreach ((item: VocabItem) => {
         $("""<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>""" format (
-          item._1,
-          item._2,
-          item._3.getOrElse("n/a"),
-          item._4
+          hilight(item._1, term),
+          hilight(item._2, term),
+          hilight(item._3.getOrElse("n/a"), term),
+          hilight(item._4, term)
         )).appendTo($("#tbody"))
       })
     }
   }
+
+  def hilight(s: String, term: String): String =
+    s replace (term, "<strong>%s</strong>" format term)
 
 }
