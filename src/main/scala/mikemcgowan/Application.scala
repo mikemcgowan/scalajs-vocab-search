@@ -19,7 +19,11 @@ object Application {
     $("#status") text t
 
   def init(): Unit = {
-    $("""<div id="status"></div>""").appendTo($("body"))
+    $("""<input type="text" placeholder="Search" id="search"/>""")
+      .appendTo($("#row1"))
+    $("""<small id="status"/>""")
+      .appendTo($("#row2"))
+
     setStatus("Please wait while the CSV file is downloaded ...")
     downloadCsv()
   }
@@ -32,7 +36,7 @@ object Application {
         setStatus("Please wait while the CSV file is parsed ...")
         val data = parseCsv(xhr.responseText)
         data foreach (d => println("%s means %s" format(d._1, d._2)))
-        setStatus("Found %d vocab items!" format data.length)
+        setStatus("%d vocab items" format data.length)
       } else {
         setStatus("Couldn't download CSV file.")
       }
