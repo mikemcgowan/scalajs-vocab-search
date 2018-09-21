@@ -1,16 +1,17 @@
 package mikemcgowan
 
-import kantan.csv.ops._
 import org.querki.jquery._
-import org.scalajs.dom.XMLHttpRequest
+import org.scalajs.dom.Event
 
 object Application {
 
   type VocabItem = (String, String, Option[String], String)
   type Vocab = List[VocabItem]
 
-  val csvUrl =
-    "https://raw.githubusercontent.com/mikemcgowan/memrise-scraper-scala/master/memrise_database.csv"
+  val searchAfterMillis = 500
+  val minTermLength = 3
+  val maxMatches = 10
+  val interval = new Interval()
 
   def main(args: Array[String]): Unit =
     $(() => init())
@@ -19,38 +20,70 @@ object Application {
     $("#status") text t
 
   def init(): Unit = {
-    $("""<input type="text" placeholder="Search" id="search"/>""")
+    $("#table").hide()
+    $("""<input type="text" placeholder="Search" id="search" disabled="disabled"/>""")
       .appendTo($("#row1"))
     $("""<small id="status"/>""")
       .appendTo($("#row2"))
-
-    setStatus("Please wait while the CSV file is downloaded ...")
-    downloadCsv()
-  }
-
-  def downloadCsv(): Unit = {
-    val xhr = new XMLHttpRequest()
-    xhr.open("GET", csvUrl)
-    xhr.onload = _ =>
-     if (xhr.status == 200) {
-        setStatus("Please wait while the CSV file is parsed ...")
-        val data = parseCsv(xhr.responseText)
-        data foreach (d => println("%s means %s" format(d._1, d._2)))
-        setStatus("%d vocab items" format data.length)
-      } else {
-        setStatus("Couldn't download CSV file.")
-      }
-    xhr.send()
-  }
-
-  def parseCsv(raw: String): Vocab = {
-    val reader = raw.asCsvReader[VocabItem](',', header = true)
-    val buf = scala.collection.mutable.ListBuffer.empty[VocabItem]
-    reader foreach {
-      case Right(x) => buf += x
-      case _ => ()
+    setStatus("Please wait while the CSV file is downloaded and parsed ...")
+    Downloader download {
+      case Right(data) => initSearch(data)
+      case Left(e)     => setStatus(e)
     }
-    buf.toList
+  }
+
+  def initSearch(vocab: Vocab): Unit = {
+    setStatus("%d vocab items" format vocab.length)
+    val s = $("#search")
+    s removeAttr "disabled"
+    s.focus()
+    s.keyup((_: Event) => interval.set(() => doSearch(vocab), searchAfterMillis))
+  }
+
+  def doSearch(vocab: Vocab): Unit = {
+    interval.clear()
+    val term = $("#search").value().asInstanceOf[String]
+    if (term.length >= minTermLength) {
+      setStatus("Searching for \"%s\" ..." format term)
+      val matches = performSearch(vocab, term)
+      val first =
+        if (matches.size > maxMatches)
+          "first %d of " format maxMatches
+        else
+          ""
+      setStatus("Showing %s%d item%s matching \"%s\"" format (
+        first,
+        matches.size,
+        if (matches.size == 1) "" else "s",
+        term
+      ))
+      renderVocab(matches take maxMatches)
+    } else {
+      setStatus("%d vocab items" format vocab.length)
+    }
+  }
+
+  def performSearch(vocab: Vocab, term: String): List[VocabItem] =
+    vocab filter {
+      case (a, b, None, d)    => List(a, b, d)    exists (_.toLowerCase contains term.toLowerCase)
+      case (a, b, Some(c), d) => List(a, b, c, d) exists (_.toLowerCase contains term.toLowerCase)
+    }
+
+  def renderVocab(vocab: Vocab): Unit = {
+    $("#tbody").empty()
+    if (vocab.isEmpty)
+      $("#table").hide()
+    else {
+      $("#table").show()
+      vocab foreach ((item: VocabItem) => {
+        $("""<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>""" format (
+          item._1,
+          item._2,
+          item._3.getOrElse("n/a"),
+          item._4
+        )).appendTo($("#tbody"))
+      })
+    }
   }
 
 }
