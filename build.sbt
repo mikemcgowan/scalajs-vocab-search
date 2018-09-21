@@ -1,6 +1,6 @@
 enablePlugins(ScalaJSPlugin)
 
-name := "Scala vocab search"
+name := "Scala.js vocab search"
 scalaVersion := "2.12.6"
 
 scalaJSUseMainModuleInitializer := true
