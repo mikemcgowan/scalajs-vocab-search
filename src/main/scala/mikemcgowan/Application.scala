@@ -3,6 +3,9 @@ package mikemcgowan
 import org.querki.jquery._
 import org.scalajs.dom.Event
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.util.{Failure, Success}
+
 object Application {
 
   type VocabItem = (String, String, Option[String], String)
@@ -26,9 +29,9 @@ object Application {
     $("""<small id="status"/>""")
       .appendTo($("#row2"))
     setStatus("Please wait while the CSV file is downloaded and parsed ...")
-    Downloader download {
-      case Right(data) => initSearch(data)
-      case Left(e)     => setStatus(e)
+    Downloader.download onComplete {
+      case Success(data) => initSearch(data)
+      case Failure(_)    => setStatus("Couldn't download CSV file.")
     }
   }
 

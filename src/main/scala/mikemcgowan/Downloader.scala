@@ -1,25 +1,23 @@
 package mikemcgowan
 
-import mikemcgowan.Application.{Vocab, VocabItem}
 import kantan.csv.ops._
-import org.scalajs.dom.XMLHttpRequest
+import mikemcgowan.Application.{Vocab, VocabItem}
+import org.scalajs.dom.ext.Ajax
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object Downloader {
 
-  val csvUrl = "https://raw.githubusercontent.com/mikemcgowan/memrise-scraper-scala/master/memrise_database.csv"
+  private val csvUrl =
+    "https://raw.githubusercontent.com/mikemcgowan/memrise-scraper-scala/master/memrise_database.csv"
 
-  def download(callback: Either[String, Vocab] => Unit): Unit = {
-    val xhr = new XMLHttpRequest()
-    xhr.open("GET", csvUrl)
-    xhr.onload = _ =>
-      xhr.status match {
-        case 200 => callback(Right(parseCsv(xhr.responseText)))
-        case _   => callback(Left("Couldn't download CSV file."))
-      }
-    xhr.send()
-  }
+  def download: Future[Vocab] =
+    Ajax.get(csvUrl) map { xhr =>
+      parseCsv(xhr.responseText)
+    }
 
-  def parseCsv(raw: String): Vocab = {
+  private def parseCsv(raw: String): Vocab = {
     val reader = raw.asCsvReader[VocabItem](',', header = true)
     val buf = scala.collection.mutable.ListBuffer.empty[VocabItem]
     reader foreach {
