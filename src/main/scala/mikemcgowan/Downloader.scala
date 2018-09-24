@@ -1,7 +1,7 @@
 package mikemcgowan
 
 import kantan.csv.ops._
-import mikemcgowan.Application.{Vocab, VocabItem}
+import mikemcgowan.components.App.{Vocab, VocabItem}
 import org.scalajs.dom.ext.Ajax
 
 import scala.concurrent.ExecutionContext.Implicits.global
