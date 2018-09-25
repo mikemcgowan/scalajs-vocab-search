@@ -11,8 +11,8 @@ object Search {
     setSearchTerm: String => Callback
   )
 
-  private def onTextChange(f: String => Callback)(e: ReactEventFromInput): Callback =
-    f(e.target.value)
+  private def onTextChange(setSearchTerm: String => Callback)(e: ReactEventFromInput): Callback =
+    setSearchTerm(e.target.value)
 
   val Component = ScalaComponent.builder[Props]("Search")
     .render_P(props =>

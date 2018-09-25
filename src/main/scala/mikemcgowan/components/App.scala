@@ -12,9 +12,6 @@ object App {
   type VocabItem = (String, String, Option[String], String)
   type Vocab = List[VocabItem]
 
-  private val minTermLength = 3
-  private val maxMatches = 10
-
   case class State(
     searchDisabled: Boolean,
     searchTerm: String,
@@ -23,46 +20,49 @@ object App {
     filteredVocab: Option[Vocab]
   )
 
-  private val initialState = State(
-    searchDisabled = true,
-    searchTerm = "",
-    statusText = "Please wait while the CSV file is downloaded and parsed ...",
-    None,
-    None
-  )
-
   val Component = ScalaComponent.builder[Unit]("Application")
-    .initialState(initialState)
+    .initialState(
+      State(
+        searchDisabled = true,
+        searchTerm = "",
+        statusText = "Please wait while the CSV file is downloaded and parsed ...",
+        None,
+        None
+      )
+    )
     .renderBackend[Backend]
     .componentDidMount(_.backend.start)
     .build
 
   class Backend($: BackendScope[Unit, State]) {
 
-    def downloadVocab: Future[Callback] = Downloader.download.map { vocab =>
-      $.modState(_.copy(
-        searchDisabled = false,
-        statusText = "%d vocab items" format vocab.length,
-        fullVocab = Some(vocab)
-      ))
-    }
+    val minTermLength = 3
+    val maxMatches = 10
 
-    def start: Callback =
-      Callback future downloadVocab
+    def downloadVocab: Future[Callback] =
+      Downloader.download.map { vocab =>
+        $.modState(_.copy(
+          searchDisabled = false,
+          statusText = "%d vocab items" format vocab.length,
+          fullVocab = Some(vocab)
+        ))
+      }
+
+    def start: Callback = Callback future downloadVocab
 
     def setSearchTerm(searchTerm: String): Callback =
       $.modState(state => {
-        val searchResults = performSearch(state.fullVocab.getOrElse(Nil), searchTerm)
+        val searchResults = filterVocab(state.fullVocab getOrElse Nil, searchTerm)
 
         val nextFilteredVocab =
           if (searchTerm.length < minTermLength)
             None
           else
-            Some(searchResults.take(maxMatches))
+            Some(searchResults take maxMatches)
 
         val nextStatusText =
           if (nextFilteredVocab.isDefined)
-            "Showing %s%d item%s matching \"%s\"" format (
+            "Showing %s%d item%s matching \"%s\"".format(
               if (searchResults.size > maxMatches) "first %d of " format maxMatches else "",
               searchResults.size,
               if (nextFilteredVocab.get.size == 1) "" else "s",
@@ -78,11 +78,13 @@ object App {
         )
       })
 
-    def performSearch(vocab: Vocab, term: String): Vocab =
+    def filterVocab(vocab: Vocab, term: String): Vocab = {
+      val f = (s: String) => s.toLowerCase contains term.toLowerCase
       vocab filter {
-        case (a, b, None, d)    => List(a, b, d)    exists (_.toLowerCase contains term.toLowerCase)
-        case (a, b, Some(c), d) => List(a, b, c, d) exists (_.toLowerCase contains term.toLowerCase)
+        case (a, b, None, d)    => List(a, b, d)    exists f
+        case (a, b, Some(c), d) => List(a, b, c, d) exists f
       }
+    }
 
     def render(s: State) =
       <.div(^.cls := "container",
