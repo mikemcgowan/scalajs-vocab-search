@@ -39,11 +39,13 @@ object App {
     val minTermLength = 3
     val maxMatches = 10
 
+    def defaultStatusText(n: Int): String = "%d vocab items" format n
+
     def downloadVocab: Future[Callback] =
       Downloader.download.map { vocab =>
         $.modState(_.copy(
           searchDisabled = false,
-          statusText = "%d vocab items" format vocab.length,
+          statusText = defaultStatusText(vocab.length),
           fullVocab = Some(vocab)
         ))
       }
@@ -69,7 +71,7 @@ object App {
               searchTerm
             )
           else
-            "%d vocab items" format state.fullVocab.get.length
+            defaultStatusText(state.fullVocab.get.length)
 
         state.copy(
           searchTerm = searchTerm,
@@ -90,8 +92,11 @@ object App {
       <.div(^.cls := "container",
         <.h1("Scala.js vocab search"),
         <.div(^.cls := "row",
-          <.div(^.cls := "column",
+          <.div(^.cls := "column column-75",
             Search.Component(Search.Props(s.searchDisabled, s.searchTerm, setSearchTerm))
+          ),
+          <.div(^.cls := "column",
+            <.a(^.cls := "button", ^.href := "#", ^.onClick --> setSearchTerm(""), "Clear")
           ),
         ),
         <.div(^.cls := "row",
