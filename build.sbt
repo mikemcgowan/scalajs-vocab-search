@@ -1,6 +1,7 @@
 enablePlugins(ScalaJSPlugin)
 
 name := "Scala.js vocab search"
+
 scalaVersion := "2.12.6"
 
 scalaJSUseMainModuleInitializer := true
@@ -29,5 +30,3 @@ jsDependencies ++= Seq(
     dependsOn "umd/react-dom.development.js"
     commonJSName "ReactDOMServer"
 )
-
-jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv()
